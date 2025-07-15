@@ -296,10 +296,14 @@ export type Database = {
           access_token: string | null
           connected_at: string
           id: string
+          is_active: boolean | null
+          metadata: Json | null
           platform: string
+          platform_display_name: string | null
           platform_user_id: string | null
           platform_username: string | null
           refresh_token: string | null
+          scope: string | null
           token_expires_at: string | null
           updated_at: string
           user_id: string
@@ -308,10 +312,14 @@ export type Database = {
           access_token?: string | null
           connected_at?: string
           id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
           platform: string
+          platform_display_name?: string | null
           platform_user_id?: string | null
           platform_username?: string | null
           refresh_token?: string | null
+          scope?: string | null
           token_expires_at?: string | null
           updated_at?: string
           user_id: string
@@ -320,10 +328,14 @@ export type Database = {
           access_token?: string | null
           connected_at?: string
           id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
           platform?: string
+          platform_display_name?: string | null
           platform_user_id?: string | null
           platform_username?: string | null
           refresh_token?: string | null
+          scope?: string | null
           token_expires_at?: string | null
           updated_at?: string
           user_id?: string

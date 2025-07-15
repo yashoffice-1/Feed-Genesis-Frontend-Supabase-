@@ -258,22 +258,22 @@ export function SocialMediaAutoPost({ imageUrl, instruction, isVisible, selected
 
       } else {
         // Mock API call for other platforms - replace with actual platform APIs
-        await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const success = Math.random() > 0.3; // 70% success rate for demo
+      
+      if (success) {
+        setPostingStatus(prev => ({
+          ...prev,
+          [platform]: { status: 'success', message: 'Posted successfully!' }
+        }));
         
-        const success = Math.random() > 0.3; // 70% success rate for demo
-        
-        if (success) {
-          setPostingStatus(prev => ({
-            ...prev,
-            [platform]: { status: 'success', message: 'Posted successfully!' }
-          }));
-          
-          toast({
-            title: "Posted Successfully",
-            description: `Your content has been posted to ${platforms[platform]?.name}!`,
-          });
-        } else {
-          throw new Error("Failed to post");
+        toast({
+          title: "Posted Successfully",
+          description: `Your content has been posted to ${platforms[platform]?.name}!`,
+        });
+      } else {
+        throw new Error("Failed to post");
         }
       }
     } catch (error) {

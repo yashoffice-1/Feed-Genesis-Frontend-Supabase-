@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Heart, Download, Copy, Trash2, Search, AlertCircle, RefreshCw } from 'lucide-react';
+import { Heart, Download, Copy, Trash2, Search, AlertCircle, RefreshCw, Upload } from 'lucide-react';
 import { useAssetLibrary, AssetLibraryItem } from '@/hooks/useAssetLibrary';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { SocialMediaUploadModal } from '@/components/SocialMediaUploadModal';
 
 export function AssetLibrary() {
   const [assets, setAssets] = useState<AssetLibraryItem[]>([]);
@@ -286,9 +287,13 @@ export function AssetLibrary() {
                             console.error('Image failed to load:', asset.asset_url);
                             const target = e.target as HTMLImageElement;
                             target.style.display = 'none';
+                            
+                            // Check if it's a JWT token issue (401 error)
+                            const isJWTError = asset.asset_url.includes('_jwt=') || asset.asset_url.includes('cloudfront');
+                            
                             // Show error message
                             const errorDiv = document.createElement('div');
-                            errorDiv.className = 'w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-sm p-4';
+                            errorDiv.className = 'w-full h-full flex items-center justify-center bg-orange-50 text-orange-700 text-sm p-4';
                             errorDiv.innerHTML = `
                               <div class="text-center">
                                 <div class="flex items-center justify-center mb-2">
@@ -296,8 +301,8 @@ export function AssetLibrary() {
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                   </svg>
                                 </div>
-                                <p class="font-medium">Image failed to load</p>
-                                <p class="text-xs mt-1">This asset may need to be re-generated</p>
+                                <p class="font-medium">${isJWTError ? 'Access token expired' : 'Image failed to load'}</p>
+                                <p class="text-xs mt-1">${isJWTError ? 'This asset URL has expired. Please regenerate the asset.' : 'This asset may need to be re-generated'}</p>
                               </div>
                             `;
                             target.parentElement?.appendChild(errorDiv);
@@ -348,9 +353,13 @@ export function AssetLibrary() {
                               console.error('Video failed to load:', asset.asset_url);
                               const target = e.target as HTMLVideoElement;
                               target.style.display = 'none';
+                              
+                              // Check if it's a JWT token issue (401 error)
+                              const isJWTError = asset.asset_url.includes('_jwt=') || asset.asset_url.includes('cloudfront');
+                              
                               // Show error message
                               const errorDiv = document.createElement('div');
-                              errorDiv.className = 'absolute inset-0 flex items-center justify-center bg-red-50 text-red-600 text-sm p-4';
+                              errorDiv.className = `absolute inset-0 flex items-center justify-center ${isJWTError ? 'bg-orange-50 text-orange-700' : 'bg-red-50 text-red-600'} text-sm p-4`;
                               errorDiv.innerHTML = `
                                 <div class="text-center">
                                   <div class="flex items-center justify-center mb-2">
@@ -358,15 +367,15 @@ export function AssetLibrary() {
                                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                     </svg>
                                   </div>
-                                  <p class="font-medium">Video unavailable</p>
-                                  <p class="text-xs mt-1">HeyGen video may require authentication</p>
-                                  ${asset.gif_url ? '<p class="text-xs mt-1 text-blue-600">Trying GIF preview...</p>' : ''}
+                                  <p class="font-medium">${isJWTError ? 'Access token expired' : 'Video unavailable'}</p>
+                                  <p class="text-xs mt-1">${isJWTError ? 'This video URL has expired. Please regenerate the asset.' : 'HeyGen video may require authentication'}</p>
+                                  ${asset.gif_url && !isJWTError ? '<p class="text-xs mt-1 text-blue-600">Trying GIF preview...</p>' : ''}
                                 </div>
                               `;
                               target.parentElement?.appendChild(errorDiv);
                               
-                              // If there's a GIF URL, try to show that instead
-                              if (asset.gif_url) {
+                              // If there's a GIF URL and it's not a JWT error, try to show that instead
+                              if (asset.gif_url && !isJWTError) {
                                 setTimeout(() => {
                                   const img = document.createElement('img');
                                   img.src = asset.gif_url!;
@@ -418,6 +427,29 @@ export function AssetLibrary() {
                             >
                               🔄
                             </Button>
+                          )}
+
+                          {/* Social Media Upload Button */}
+                          {asset.asset_url && asset.asset_url !== "processing" && asset.asset_url !== "pending" && asset.asset_url !== "failed" && (
+                            <SocialMediaUploadModal 
+                              asset={{
+                                id: asset.id,
+                                title: asset.title,
+                                asset_type: asset.asset_type === 'formats' || asset.asset_type === 'ad' ? 'image' : asset.asset_type as 'image' | 'video' | 'content',
+                                asset_url: asset.asset_url,
+                                description: asset.description,
+                                tags: asset.tags
+                              }}
+                            >
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-blue-600 hover:text-blue-700"
+                                title="Upload to social media platforms"
+                              >
+                                <Upload className="h-4 w-4" />
+                              </Button>
+                            </SocialMediaUploadModal>
                           )}
                          
                          {asset.asset_type === 'content' && asset.content ? (
