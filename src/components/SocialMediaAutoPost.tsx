@@ -39,9 +39,10 @@ interface PostingStatus {
 export function SocialMediaAutoPost({ imageUrl, instruction, isVisible, selectedChannels = [], formatSpecs }: SocialMediaAutoPostProps) {
   const { toast } = useToast();
   const [platformContent, setPlatformContent] = useState<Record<string, PlatformContent>>({});
-  const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>(['facebook']); // Mock data
+  const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>(['facebook']); // Mock data for non-Instagram platforms
   const [postingStatus, setPostingStatus] = useState<Record<string, PostingStatus>>({});
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
+  const [isCheckingConnections, setIsCheckingConnections] = useState(false);
 
   const platforms = {
     instagram: { name: "Instagram", icon: Instagram, color: "bg-pink-600" },
@@ -66,6 +67,41 @@ export function SocialMediaAutoPost({ imageUrl, instruction, isVisible, selected
       generatePlatformContent();
     }
   }, [isVisible, imageUrl, instruction]);
+
+  useEffect(() => {
+    if (isVisible) {
+      checkConnectedPlatforms();
+    }
+  }, [isVisible]);
+
+  const checkConnectedPlatforms = async () => {
+    setIsCheckingConnections(true);
+    try {
+      // Check Instagram connection
+      const { data, error } = await supabase.functions.invoke('instagram-oauth', {
+        body: {
+          action: 'check_connection',
+          state: 'default_user' // You might want to use actual user ID
+        }
+      });
+
+      if (!error && data.success && data.connected) {
+        setConnectedPlatforms(prev => {
+          if (!prev.includes('instagram')) {
+            return [...prev, 'instagram'];
+          }
+          return prev;
+        });
+      } else {
+        setConnectedPlatforms(prev => prev.filter(p => p !== 'instagram'));
+      }
+    } catch (error) {
+      console.error('Error checking connected platforms:', error);
+      setConnectedPlatforms(prev => prev.filter(p => p !== 'instagram'));
+    } finally {
+      setIsCheckingConnections(false);
+    }
+  };
 
   const generatePlatformContent = async () => {
     setIsGeneratingContent(true);
@@ -184,7 +220,44 @@ export function SocialMediaAutoPost({ imageUrl, instruction, isVisible, selected
     }));
 
     try {
-      // Mock API call - replace with actual platform APIs
+      if (platform === 'instagram') {
+        // Real Instagram posting
+        const content = platformContent[platform];
+        if (!content) {
+          throw new Error('No content available for Instagram');
+        }
+
+        // Combine caption, hashtags, and mentions
+        const fullCaption = [
+          content.caption,
+          content.hashtags,
+          content.mentions
+        ].filter(Boolean).join('\n\n');
+
+        const { data, error } = await supabase.functions.invoke('instagram-post', {
+          body: {
+            userId: 'default_user', // You might want to use actual user ID
+            imageUrl: imageUrl,
+            caption: fullCaption
+          }
+        });
+
+        if (error || !data.success) {
+          throw new Error(data?.error || 'Failed to post to Instagram');
+        }
+
+        setPostingStatus(prev => ({
+          ...prev,
+          [platform]: { status: 'success', message: 'Posted successfully!' }
+        }));
+        
+        toast({
+          title: "Posted Successfully",
+          description: `Your content has been posted to Instagram!`,
+        });
+
+      } else {
+        // Mock API call for other platforms - replace with actual platform APIs
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       const success = Math.random() > 0.3; // 70% success rate for demo
@@ -201,6 +274,7 @@ export function SocialMediaAutoPost({ imageUrl, instruction, isVisible, selected
         });
       } else {
         throw new Error("Failed to post");
+        }
       }
     } catch (error) {
       setPostingStatus(prev => ({
@@ -210,7 +284,7 @@ export function SocialMediaAutoPost({ imageUrl, instruction, isVisible, selected
       
       toast({
         title: "Posting Failed",
-        description: `Failed to post to ${platforms[platform]?.name}. Please try again.`,
+        description: `Failed to post to ${platforms[platform]?.name}. ${error.message || 'Please try again.'}`,
         variant: "destructive",
       });
     }

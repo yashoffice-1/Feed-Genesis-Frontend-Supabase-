@@ -1,6 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { SocialMediaUploadModal } from "@/components/SocialMediaUploadModal";
 import { 
   Share2, 
   Mail, 
@@ -8,7 +9,8 @@ import {
   Copy, 
   Download,
   Image as ImageIcon,
-  Save
+  Save,
+  Upload
 } from "lucide-react";
 
 interface LibraryAsset {
@@ -79,6 +81,35 @@ export function AssetActions({ asset }: AssetActionsProps) {
 
   return (
     <div className="mt-4 space-y-3">
+      {/* Social Media Upload section */}
+      <div>
+        <div className="flex items-center space-x-2 mb-2">
+          <Upload className="h-4 w-4" />
+          <span className="text-sm font-medium">Upload to Social Media:</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <SocialMediaUploadModal 
+            asset={{
+              id: asset.id,
+              title: asset.title,
+              asset_type: asset.type,
+              asset_url: asset.url,
+              description: `Generated with FeedGenesis - ${asset.title}`,
+              tags: [asset.type, 'feedgenesis']
+            }}
+          >
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center space-x-1 bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+            >
+              <Upload className="h-3 w-3" />
+              <span>Upload to Platforms</span>
+            </Button>
+          </SocialMediaUploadModal>
+        </div>
+      </div>
+
       {/* Video sharing section */}
       <div>
         <div className="flex items-center space-x-2 mb-2">

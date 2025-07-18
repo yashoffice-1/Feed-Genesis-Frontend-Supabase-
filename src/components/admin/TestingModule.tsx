@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Play, Check, X, AlertCircle, RotateCcw } from "lucide-react";
 import { SimpleTestButtons } from "../SimpleTestButtons";
+import { useYouTubeAuth } from '@/hooks/useYouTubeAuth';
 
 interface TestStep {
   id: string;
@@ -58,6 +59,14 @@ export function TestingModule() {
   const [isRunning, setIsRunning] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const { toast } = useToast();
+  const { 
+    connect: connectYouTube, 
+    disconnect: disconnectYouTube, 
+    uploadVideo: uploadYouTubeVideo,
+    isConnecting: isYouTubeConnecting, 
+    isConnected: isYouTubeConnected,
+    userInfo: youTubeUserInfo 
+  } = useYouTubeAuth();
 
   const updateStepStatus = (stepId: string, status: TestStep['status'], error?: string, duration?: number) => {
     setTestSteps(prev => prev.map(step => 
@@ -218,6 +227,61 @@ export function TestingModule() {
   const completedSteps = testSteps.filter(step => step.status === 'success').length;
   const progressPercentage = (completedSteps / testSteps.length) * 100;
 
+  const testYouTubeUpload = async () => {
+    if (!isYouTubeConnected) {
+      toast({
+        title: "YouTube Not Connected",
+        description: "Please connect your YouTube account first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Create a test video file (you can replace this with actual file input)
+      const canvas = document.createElement('canvas');
+      canvas.width = 1920;
+      canvas.height = 1080;
+      const ctx = canvas.getContext('2d');
+      
+      // Create a simple test video frame
+      ctx.fillStyle = '#ff0000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '48px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Test Video Upload', canvas.width / 2, canvas.height / 2);
+      
+      // Convert canvas to blob
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((blob) => {
+          resolve(blob!);
+        }, 'image/png');
+      });
+      
+      // Create a fake video file for testing
+      const testFile = new File([blob], 'test-video.mp4', { type: 'video/mp4' });
+      
+      // Note: This is a simplified test. In reality, you'd need a proper video file
+      // For now, this will test the API call structure
+      
+      await uploadYouTubeVideo(
+        testFile,
+        'Test Video Upload - ' + new Date().toISOString(),
+        'This is a test video uploaded from the FeedGenesis app',
+        ['test', 'feedgenesis', 'upload']
+      );
+      
+    } catch (error) {
+      console.error('YouTube upload test failed:', error);
+      toast({
+        title: "Upload Test Failed",
+        description: error.message || "Failed to test YouTube upload",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -282,6 +346,60 @@ export function TestingModule() {
                 </div>
               </div>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>YouTube Integration Tests</CardTitle>
+          <CardDescription>Test YouTube connection and video upload functionality</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div>
+              <h3 className="font-medium">YouTube Connection</h3>
+              <p className="text-sm text-muted-foreground">
+                {isYouTubeConnected 
+                  ? `Connected to: ${youTubeUserInfo?.channelTitle}` 
+                  : 'Not connected'}
+              </p>
+            </div>
+            <div className="flex space-x-2">
+              {!isYouTubeConnected ? (
+                <Button 
+                  onClick={connectYouTube}
+                  disabled={isYouTubeConnecting}
+                  size="sm"
+                >
+                  {isYouTubeConnecting ? 'Connecting...' : 'Connect YouTube'}
+                </Button>
+              ) : (
+                <Button 
+                  onClick={disconnectYouTube}
+                  variant="outline"
+                  size="sm"
+                >
+                  Disconnect
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div>
+              <h3 className="font-medium">Video Upload Test</h3>
+              <p className="text-sm text-muted-foreground">
+                Test video upload functionality (requires YouTube connection)
+              </p>
+            </div>
+            <Button 
+              onClick={testYouTubeUpload}
+              disabled={!isYouTubeConnected}
+              size="sm"
+            >
+              Test Upload
+            </Button>
           </div>
         </CardContent>
       </Card>

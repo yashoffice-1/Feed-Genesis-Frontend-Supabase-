@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useInstagramAuth } from "@/hooks/useInstagramAuth";
+import { useYouTubeAuth } from "@/hooks/useYouTubeAuth";
 import { 
   Instagram, 
   Facebook, 
@@ -12,7 +14,8 @@ import {
   CheckCircle,
   Plus,
   Settings,
-  Unlink
+  Unlink,
+  Loader2
 } from "lucide-react";
 
 interface SocialChannel {
@@ -25,6 +28,21 @@ interface SocialChannel {
 
 export function SocialProfiles() {
   const { toast } = useToast();
+  const { 
+    connect: connectInstagram, 
+    disconnect: disconnectInstagram, 
+    isConnecting: isInstagramConnecting, 
+    isConnected: isInstagramConnected,
+    userInfo: instagramUserInfo
+  } = useInstagramAuth();
+  const { 
+    connect: connectYouTube, 
+    disconnect: disconnectYouTube, 
+    isConnecting: isYouTubeConnecting, 
+    isConnected: isYouTubeConnected,
+    userInfo: youTubeUserInfo
+  } = useYouTubeAuth();
+  const [loadingChannels, setLoadingChannels] = useState<string[]>([]);
   const [channels, setChannels] = useState<SocialChannel[]>([
     {
       id: "instagram",
@@ -89,25 +107,58 @@ export function SocialProfiles() {
     }
   ]);
 
-  const handleConnect = (channelId: string) => {
-    toast({
-      title: "Integration Coming Soon",
-      description: `${channels.find(c => c.id === channelId)?.name} integration will be available soon.`,
-    });
+  useEffect(() => {
+    // Update channel status based on hook states
+    setChannels(prev => prev.map(channel => {
+      if (channel.id === 'instagram') {
+        return { 
+          ...channel, 
+          connected: isInstagramConnected,
+          accountName: instagramUserInfo ? `@${instagramUserInfo.username}` : undefined
+        };
+      }
+      if (channel.id === 'youtube') {
+        return { 
+          ...channel, 
+          connected: isYouTubeConnected,
+          accountName: youTubeUserInfo ? youTubeUserInfo.channelTitle : undefined
+        };
+      }
+      return channel;
+    }));
+  }, [isInstagramConnected, instagramUserInfo, isYouTubeConnected, youTubeUserInfo]);
+
+    const handleConnect = async (channelId: string) => {
+    if (channelId === 'instagram') {
+      await connectInstagram();
+    } else if (channelId === 'youtube') {
+      await connectYouTube();
+    } else {
+      toast({
+        title: "Integration Coming Soon",
+        description: `${channels.find(c => c.id === channelId)?.name} integration will be available soon.`,
+      });
+    }
   };
 
-  const handleDisconnect = (channelId: string) => {
-    setChannels(prev => 
-      prev.map(channel => 
-        channel.id === channelId 
-          ? { ...channel, connected: false, accountName: undefined }
-          : channel
-      )
-    );
-    toast({
-      title: "Account Disconnected",
-      description: `Successfully disconnected from ${channels.find(c => c.id === channelId)?.name}.`,
-    });
+    const handleDisconnect = async (channelId: string) => {
+    if (channelId === 'instagram') {
+      await disconnectInstagram();
+    } else if (channelId === 'youtube') {
+      await disconnectYouTube();
+    } else {
+      setChannels(prev => 
+        prev.map(channel => 
+          channel.id === channelId 
+            ? { ...channel, connected: false, accountName: undefined }
+            : channel
+        )
+      );
+      toast({
+        title: "Account Disconnected",
+        description: `Successfully disconnected from ${channels.find(c => c.id === channelId)?.name}.`,
+      });
+    }
   };
 
   const handleManage = (channelId: string) => {
@@ -158,9 +209,26 @@ export function SocialProfiles() {
                           onClick={() => handleConnect(channel.id)}
                           size="sm"
                           className="flex-1"
+                                                    disabled={
+                            channel.id === 'instagram' ? isInstagramConnecting : 
+                            channel.id === 'youtube' ? isYouTubeConnecting :
+                            loadingChannels.includes(channel.id)
+                          }
                         >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Connect
+                          {(
+                            channel.id === 'instagram' ? isInstagramConnecting : 
+                            channel.id === 'youtube' ? isYouTubeConnecting :
+                            loadingChannels.includes(channel.id)
+                          ) ? (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          ) : (
+                            <Plus className="h-3 w-3 mr-1" />
+                          )}
+                          {(
+                            channel.id === 'instagram' ? isInstagramConnecting : 
+                            channel.id === 'youtube' ? isYouTubeConnecting :
+                            loadingChannels.includes(channel.id)
+                          ) ? 'Connecting...' : 'Connect'}
                         </Button>
                       ) : (
                         <>
@@ -169,6 +237,7 @@ export function SocialProfiles() {
                             variant="outline"
                             size="sm"
                             className="flex-1"
+                            disabled={loadingChannels.includes(channel.id)}
                           >
                             <Settings className="h-3 w-3 mr-1" />
                             Manage
@@ -177,8 +246,21 @@ export function SocialProfiles() {
                             onClick={() => handleDisconnect(channel.id)}
                             variant="outline"
                             size="sm"
+                                                        disabled={
+                              channel.id === 'instagram' ? isInstagramConnecting : 
+                              channel.id === 'youtube' ? isYouTubeConnecting :
+                              loadingChannels.includes(channel.id)
+                            }
                           >
-                            <Unlink className="h-3 w-3" />
+                            {(
+                              channel.id === 'instagram' ? isInstagramConnecting : 
+                              channel.id === 'youtube' ? isYouTubeConnecting :
+                              loadingChannels.includes(channel.id)
+                            ) ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Unlink className="h-3 w-3" />
+                            )}
                           </Button>
                         </>
                       )}
