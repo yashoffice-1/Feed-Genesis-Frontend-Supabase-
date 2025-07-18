@@ -143,7 +143,16 @@ export function YouTubeCallback() {
           token: tokenData.access_token
         }, window.location.origin);
 
-        window.close();
+        // Check if this was a direct navigation or popup
+        const returnUrl = localStorage.getItem('youtube_auth_return_url');
+        if (returnUrl) {
+          localStorage.removeItem('youtube_auth_return_url');
+          // Redirect back to the original page
+          window.location.href = returnUrl + '?youtube_success=true';
+        } else {
+          // This was a popup, close it
+          window.close();
+        }
 
       } catch (error) {
         console.error('YouTube callback error:', error);
@@ -154,7 +163,16 @@ export function YouTubeCallback() {
           error: error.message || 'Authentication failed'
         }, window.location.origin);
         
-        window.close();
+        // Check if this was a direct navigation or popup
+        const returnUrl = localStorage.getItem('youtube_auth_return_url');
+        if (returnUrl) {
+          localStorage.removeItem('youtube_auth_return_url');
+          // Redirect back to the original page with error
+          window.location.href = returnUrl + '?youtube_error=' + encodeURIComponent(error.message);
+        } else {
+          // This was a popup, close it
+          window.close();
+        }
       }
     };
 

@@ -128,14 +128,19 @@ export function useYouTubeAuth() {
 
       window.addEventListener('message', handleMessage);
 
-      // Check if popup was closed manually
+      // Check if popup was closed manually with better error handling
       const checkClosed = setInterval(() => {
-        if (popup?.closed) {
-          clearInterval(checkClosed);
-          setIsConnecting(false);
-          window.removeEventListener('message', handleMessage);
+        try {
+          if (popup?.closed) {
+            clearInterval(checkClosed);
+            setIsConnecting(false);
+            window.removeEventListener('message', handleMessage);
+          }
+        } catch (error) {
+          // Ignore CORS errors when checking popup state
+          console.log('Popup state check blocked by browser security (normal behavior)');
         }
-      }, 1000);
+      }, 2000); // Increase interval to reduce CORS errors
 
     } catch (error) {
       toast({
